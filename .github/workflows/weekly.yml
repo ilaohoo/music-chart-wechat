@@ -1,0 +1,32 @@
+name: Weekly Music Chart Push
+
+on:
+  # 定时触发：每周六上午10:00（北京时间）
+  schedule:
+    - cron: '0 2 * * 6'  # UTC时间2:00 = 北京时间10:00
+  
+  # 手动触发（可以在GitHub页面上手动运行）
+  workflow_dispatch:
+
+jobs:
+  push-music-chart:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+      
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: 安装依赖
+        run: |
+          pip install requests beautifulsoup4 schedule
+      
+      - name: 运行脚本
+        env:
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+        run: |
+          python music_chart.py
