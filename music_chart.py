@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-华语音乐榜聚合工具 - 支持汽水音乐等多榜单
+华语音乐榜聚合工具 - 自动适配 GitHub Actions 环境
 """
 
 import requests
@@ -22,15 +22,8 @@ class MusicChartAggregator:
         }
     
     def fetch_qishui_chart(self, limit: int = 30) -> List[Dict]:
-        """
-        抓取汽水音乐「看见音乐计划」周榜
-        
-        榜单说明：基于抖音使用歌曲发布的视频播放量 + 汽水音乐流媒体播放量综合得出，
-        反映当下最真实的流行趋势[citation:4]
-        """
+        """抓取汽水音乐「看见音乐计划」周榜"""
         print("🥤 正在抓取【汽水音乐 - 看见音乐计划周榜】...")
-        
-        # 基于2025-2026年汽水音乐真实榜单数据[citation:2][citation:4]
         backup = [
             {'name': '跳楼机', 'singer': 'LBI利比', 'rank': 1, 
              'desc': '2025年现象级爆款，汽水音乐收藏超530万次，抖音话题播放超150亿次'},
@@ -53,12 +46,9 @@ class MusicChartAggregator:
             {'name': '天亮以前说再见', 'singer': '徐化文(四熹丸子)', 'rank': 10,
              'desc': '打歌视频点赞超1196万，热度值995万'},
         ]
-        
         for song in backup[:limit]:
             song['chart'] = '汽水音乐·看见音乐计划周榜'
-            song['data_source'] = 'qishui'
-        
-        print(f"  ✅ 获取 {len(backup[:limit])} 首（基于抖音+汽水音乐双端数据）")
+        print(f"  ✅ 获取 {len(backup[:limit])} 首")
         return backup[:limit]
     
     def fetch_tencent_weekly_chart(self, limit: int = 40) -> List[Dict]:
@@ -175,8 +165,15 @@ class WeChatPusher:
         payload = {"token": self.token, "title": title, "content": content, "template": "markdown"}
         try:
             resp = requests.post(self.api_url, json=payload, timeout=10)
-            return resp.json().get('code') == 200
-        except:
+            result = resp.json()
+            if result.get('code') == 200:
+                print("✅ PushPlus 推送成功")
+                return True
+            else:
+                print(f"❌ 推送失败: {result.get('msg')}")
+                return False
+        except Exception as e:
+            print(f"❌ 推送异常: {e}")
             return False
 
 
@@ -186,7 +183,7 @@ def format_message(songs: List[Dict]) -> str:
     lines = [
         f"## 🎵 华语音乐榜周报\n",
         f"> 📅 {now} 推送\n",
-        f"> 🆕 新增汽水音乐榜（抖音+汽水音乐双端数据）\n",
+        f"> 🆕 包含汽水音乐榜（抖音+汽水音乐双端数据）\n",
         "---\n",
         "### 🏆 综合TOP榜\n"
     ]
@@ -197,27 +194,26 @@ def format_message(songs: List[Dict]) -> str:
             lines.append(f"> 📝 {s['description']}")
         lines.append(f"> 🏆 {s['chart']}\n")
     
-    # 新增：汽水音乐榜单特色说明
     lines.append("---\n")
     lines.append("### 🥤 关于汽水音乐榜\n")
-    lines.append("> 基于抖音视频播放量 + 汽水音乐流媒体播放量综合排名，")
-    lines.append("> 反映当下最真实的流行趋势[citation:4]。\n")
-    lines.append(f"\n> 📊 共收录 {len(songs)} 首歌曲 | 数据仅供参考")
+    lines.append("> 基于抖音视频播放量 + 汽水音乐流媒体播放量综合排名\n")
+    lines.append(f"\n> 📊 共收录 {len(songs)} 首歌曲")
     return '\n'.join(lines)
 
 
 def run_weekly_task():
-    """每周执行的主任务"""
+    """执行推送任务"""
     print(f"⏰ 执行周报推送 - {datetime.now()}")
     
-    TOKEN = os.environ.get('PUSHPLUS_TOKEN', '你的Token')
-    if TOKEN == '你的Token':
-        print("⚠️ 请设置环境变量 PUSHPLUS_TOKEN")
+    # 从环境变量读取 Token
+    TOKEN = os.environ.get('PUSHPLUS_TOKEN')
+    if not TOKEN:
+        print("❌ 错误：未设置环境变量 PUSHPLUS_TOKEN")
         return False
     
     agg = MusicChartAggregator()
     songs = agg.merge_songs([
-        agg.fetch_qishui_chart(30),           # 新增：汽水音乐榜
+        agg.fetch_qishui_chart(30),
         agg.fetch_tencent_weekly_chart(30),
         agg.fetch_billboard_starpower(15),
         agg.fetch_wangyiyun_hot_chart(20),
@@ -228,31 +224,37 @@ def run_weekly_task():
     
     msg = format_message(songs)
     pusher = WeChatPusher(TOKEN)
-    if pusher.send_markdown("🎵 华语音乐榜周报", msg):
-        print("✅ 推送成功")
-        return True
-    else:
-        print("❌ 推送失败")
-        return False
+    return pusher.send_markdown("🎵 华语音乐榜周报", msg)
 
 
 def main():
-    print("🎤 华语音乐榜工具 v3.0")
-    print("新增榜单：汽水音乐·看见音乐计划周榜")
-    print("-" * 50)
-    print("1. 手动运行一次")
-    print("2. 启动定时任务（每周六10:00）")
-    choice = input("请选择: ").strip()
-    if choice == "2":
-        import schedule
-        schedule.every().saturday.at("10:00").do(run_weekly_task)
-        print("⏰ 定时器已启动...")
-        while True:
-            schedule.run_pending()
-            import time
-            time.sleep(60)
+    """主函数 - 自动检测环境"""
+    # 检测是否在 GitHub Actions 环境中
+    is_github_actions = os.environ.get('GITHUB_ACTIONS') == 'true'
+    
+    if is_github_actions:
+        # GitHub Actions 环境：直接执行推送
+        print("🤖 检测到 GitHub Actions 环境，自动执行推送...")
+        success = run_weekly_task()
+        sys.exit(0 if success else 1)
     else:
-        run_weekly_task()
+        # 本地环境：显示菜单
+        print("🎤 华语音乐榜工具 v3.0")
+        print("新增榜单：汽水音乐·看见音乐计划周榜")
+        print("-" * 50)
+        print("1. 手动运行一次")
+        print("2. 启动定时任务（每周六10:00）")
+        choice = input("请选择: ").strip()
+        if choice == "2":
+            import schedule
+            import time
+            schedule.every().saturday.at("10:00").do(run_weekly_task)
+            print("⏰ 定时器已启动，保持窗口运行...")
+            while True:
+                schedule.run_pending()
+                time.sleep(60)
+        else:
+            run_weekly_task()
 
 
 if __name__ == "__main__":
