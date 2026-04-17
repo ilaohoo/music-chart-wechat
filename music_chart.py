@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 华语音乐榜工具 - 高互动版点评文案
-包含：情绪共鸣、场景推荐、冷知识、互动引导
 """
 
 import requests
@@ -16,9 +15,8 @@ from collections import OrderedDict
 
 class MusicReviewGenerator:
     """高互动版音乐点评生成器"""
-    
+
     def __init__(self):
-        # 歌曲详细数据库
         self.song_database = {
             '跳楼机': {
                 'singer': 'LBI利比',
@@ -119,7 +117,7 @@ class MusicReviewGenerator:
                 'tags': ['甜蜜', '上头', '李荣浩']
             }
         }
-    
+
     def get_song_data(self, song_name: str) -> Dict:
         """获取歌曲详细数据"""
         if song_name in self.song_database:
@@ -138,12 +136,11 @@ class MusicReviewGenerator:
             'emotion': '好听',
             'tags': ['新歌', '推荐']
         }
-    
+
     def generate_wechat_message(self, songs: List[Dict], top_n: int = 6) -> str:
-        """生成微信推送消息（高互动版）"""
+        """生成微信推送消息"""
         now = datetime.now()
-        
-        # 获取歌曲详细数据
+
         song_details = []
         for i, s in enumerate(songs[:top_n], 1):
             data = self.get_song_data(s['name'])
@@ -159,17 +156,16 @@ class MusicReviewGenerator:
                 'emotion': data['emotion'],
                 'tags': data['tags']
             })
-        
+
         # 随机选择互动话题
-       互动话题 = [
+        topic_list = [
             "💬 这周你单曲循环的是哪首？评论区见",
             "💬 你觉得这周冠军实至名归吗？",
             "💬 哪首歌是你的本周TOP1？",
             "💬 还有什么宝藏歌曲推荐？评论区分享"
         ]
-        话题 = random.choice(互动话题)
-        
-        # 生成文案
+        topic = random.choice(topic_list)
+
         message = f"""🎵 华语音乐榜周报 - {now.strftime('%m月%d日')}
 
 ━━━━━━━━━━━━━━━━━━━━━
@@ -180,7 +176,7 @@ class MusicReviewGenerator:
         for song in song_details:
             message += f"""🎵 {song['rank']}. 《{song['name']}》- {song['singer']}
 
-   📊 播放量：{song['play_count']} ｜ 收藏：{song['collect_count']}
+   📊 播放量：{song['play_count']}
    🎸 风格：{song['style']}
    💡 亮点：{song['highlight']}
    🎧 适合场景：{song['scene']}
@@ -190,54 +186,28 @@ class MusicReviewGenerator:
 
 ━━━━━━━━━━━━━━━━━━━━━
 """
-        
-        message += f"""
-✨ 本周情绪关键词：{'、'.join([s['emotion'] for s in song_details[:3]])}
 
-{话题}
+        emotions = [s['emotion'] for s in song_details[:3]]
+        message += f"""
+✨ 本周情绪关键词：{'、'.join(emotions)}
+
+{topic}
 
 #华语音乐 #{song_details[0]['tags'][0]} #新歌推荐 #宝藏歌曲
 
 💡 复制上方文案，发抖音/小红书直接可用
 """
         return message
-    
-    def generate_tiktok_only(self, songs: List[Dict], top_n: int = 5) -> str:
-        """生成抖音短文案"""
-        song_details = []
-        for i, s in enumerate(songs[:top_n], 1):
-            data = self.get_song_data(s['name'])
-            song_details.append({
-                'rank': i,
-                'name': s['name'],
-                'singer': data['singer'],
-                'play_count': data['play_count'],
-                'feeling': data['feeling']
-            })
-        
-        message = f"""【本周华语乐坛TOP{top_n}】听完直接上头❗
-
-🔥 冠军：《{song_details[0]['name']}》- {song_details[0]['singer']}
-   {song_details[0]['feeling']} | 播放{song_details[0]['play_count']}
-
-"""
-        for song in song_details[1:3]:
-            message += f"🎵 《{song['name']}》- {song['singer']}\n"
-            message += f"   {song['feeling']}\n\n"
-        
-        message += f"💬 你心中TOP1是哪首？👇\n"
-        message += f"#华语音乐 #新歌推荐 #{song_details[0]['name']}"
-        return message
 
 
 class MusicChartAggregator:
     """华语音乐榜单聚合器"""
-    
+
     def __init__(self):
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; x64) AppleWebKit/537.36',
         }
-    
+
     def fetch_qishui_chart(self, limit: int = 30) -> List[Dict]:
         """抓取汽水音乐榜"""
         backup = [
@@ -252,7 +222,7 @@ class MusicChartAggregator:
         for song in backup[:limit]:
             song['chart'] = '汽水音乐榜'
         return backup[:limit]
-    
+
     def fetch_tencent_chart(self, limit: int = 30) -> List[Dict]:
         """抓取腾讯音乐由你榜"""
         backup = [
@@ -266,7 +236,7 @@ class MusicChartAggregator:
         for song in backup[:limit]:
             song['chart'] = '腾讯音乐由你榜'
         return backup[:limit]
-    
+
     def merge_songs(self, songs_list: List[List[Dict]]) -> List[Dict]:
         """合并去重"""
         merged = OrderedDict()
@@ -288,11 +258,16 @@ class WeChatPusher:
     def __init__(self, token: str):
         self.token = token
         self.api_url = "https://www.pushplus.plus/send"
-    
+
     def send_markdown(self, title: str, content: str) -> bool:
-        payload = {"token": self.token, "title": title, "content": content, "template": "markdown"}
+        payload = {
+            "token": self.token,
+            "title": title,
+            "content": content,
+            "template": "markdown"
+        }
         try:
-            resp = requests.post(self.api_url, json=payload, timeout=10)
+            resp = requests.post(self.api_url, json=payload, timeout=30)
             result = resp.json()
             return result.get('code') == 200
         except Exception as e:
@@ -303,49 +278,37 @@ class WeChatPusher:
 def run_weekly_task():
     """每周执行的主任务"""
     print(f"⏰ 执行周报推送 - {datetime.now()}")
-    
+
     TOKEN = os.environ.get('PUSHPLUS_TOKEN')
     if not TOKEN:
         print("❌ 错误：未设置环境变量 PUSHPLUS_TOKEN")
         return False
-    
-    # 1. 抓取榜单数据
+
     agg = MusicChartAggregator()
     songs = agg.merge_songs([
         agg.fetch_qishui_chart(20),
         agg.fetch_tencent_chart(20)
     ])
     songs.sort(key=lambda x: x.get('rank', 999))
-    
-    # 2. 生成点评文案
+
     generator = MusicReviewGenerator()
     message = generator.generate_wechat_message(songs, top_n=6)
-    
-    # 3. 推送到微信
+
     pusher = WeChatPusher(TOKEN)
     success = pusher.send_markdown("🎵 华语音乐榜周报", message)
-    
+
     if success:
         print("✅ 推送成功！")
     else:
         print("❌ 推送失败")
-    
+
     return success
-
-
-def main():
-    """主函数"""
-    print("🎤 华语音乐榜工具 v5.0")
-    print("=" * 50)
-    
-    run_weekly_task()
 
 
 if __name__ == "__main__":
     is_github_actions = os.environ.get('GITHUB_ACTIONS') == 'true'
-    
     if is_github_actions:
         print("🤖 GitHub Actions 模式运行")
         run_weekly_task()
     else:
-        main()
+        run_weekly_task()
