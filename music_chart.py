@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-华语音乐榜工具 - 小红书风格推送版
-每周六10:00 推送小红书法文案，复制即可发布
+华语音乐榜工具 - 完整版
+功能：多榜单聚合 + 小红书风格文案 + 数据来源声明 + 微信推送
 """
 
 import requests
@@ -193,7 +193,7 @@ class MusicReviewGenerator:
         }
 
     def generate_xiaohongshu_post(self, songs: List[Dict], top_n: int = 10) -> str:
-        """生成小红书风格文案"""
+        """生成小红书风格文案（含数据来源）"""
         now = datetime.now()
         week_num = now.strftime('%U')
 
@@ -256,48 +256,23 @@ class MusicReviewGenerator:
 
 ━━━━━━━━━━━━━━━━━━━━━
 
+📊 数据来源：
+• 腾讯音乐由你榜（播放35%+传播20%+喜好10%+付费15%+人气20%）
+• 网易云音乐热歌榜（已接入Chartmetric全球数据平台）
+• 汽水音乐&抖音看见音乐榜（抖音视频播放量+汽水音乐播放量）
+• Billboard Global 华语榜（海外流媒体热度）
+• KKBOX 华语人气周榜（覆盖港澳台及东南亚）
+
+📅 统计周期：{now.strftime('%Y年第%U周')}（{now.strftime('%Y年%m月%d日')}更新）
+💡 榜单数据仅供音乐推荐参考，版权归原平台所有
+
+━━━━━━━━━━━━━━━━━━━━━
+
 💬 {topic}
 
 #华语音乐 #新歌推荐 #音乐榜单 #{song_details[0]['name']} #{song_details[0]['tags'][0]} #宝藏音乐
 """
         return post
-
-    def generate_tiktok_script(self, songs: List[Dict], top_n: int = 10) -> str:
-        """生成抖音口播脚本（可选保留）"""
-        now = datetime.now()
-        song_details = []
-        for i, s in enumerate(songs[:top_n], 1):
-            data = self.get_song_data(s['name'])
-            song_details.append({
-                'rank': i,
-                'name': s['name'],
-                'singer': data['singer'],
-                'play_count': data['play_count'],
-                'feeling': data['feeling']
-            })
-
-        script = f"""【0-8秒 钩子】
-这周华语乐坛杀出一匹黑马，直接空降冠军！你绝对猜不到是谁。
-
-【8-35秒 榜单速览】
-第十名，{song_details[9]['name']} - {song_details[9]['singer']}，播放量{song_details[9]['play_count']}，{song_details[9]['feeling']}
-第九名，{song_details[8]['name']} - {song_details[8]['singer']}，播放量{song_details[8]['play_count']}，{song_details[8]['feeling']}
-第八名，{song_details[7]['name']} - {song_details[7]['singer']}，播放量{song_details[7]['play_count']}，{song_details[7]['feeling']}
-第七名，{song_details[6]['name']} - {song_details[6]['singer']}，播放量{song_details[6]['play_count']}，{song_details[6]['feeling']}
-第六名，{song_details[5]['name']} - {song_details[5]['singer']}，播放量{song_details[5]['play_count']}，{song_details[5]['feeling']}
-第五名，{song_details[4]['name']} - {song_details[4]['singer']}，播放量{song_details[4]['play_count']}，{song_details[4]['feeling']}
-第四名，{song_details[3]['name']} - {song_details[3]['singer']}，播放量{song_details[3]['play_count']}，{song_details[3]['feeling']}
-第三名，{song_details[2]['name']} - {song_details[2]['singer']}，播放量{song_details[2]['play_count']}，{song_details[2]['feeling']}
-第二名，{song_details[1]['name']} - {song_details[1]['singer']}，播放量{song_details[1]['play_count']}，{song_details[1]['feeling']}
-第一名，{song_details[0]['name']} - {song_details[0]['singer']}，播放量{song_details[0]['play_count']}，{song_details[0]['feeling']}
-
-【35-42秒 深度点评】
-这周榜单最大的看点，是新人逆袭。前三名里，冠军和亚军都是00后新人，周深、陈奕迅这些老将被挤到了后面。说明什么？华语乐坛在变天。
-
-【42-50秒 互动结尾】
-这周榜单你服吗？你心中的TOP1是哪首？评论区告诉我。关注我，每周带你看最新音乐榜。
-"""
-        return script
 
 
 class MusicChartAggregator:
