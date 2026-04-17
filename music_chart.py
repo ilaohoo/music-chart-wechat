@@ -123,13 +123,13 @@ class MusicReviewGenerator:
         if song_name in self.song_database:
             return self.song_database[song_name]
         return {
-            'singer': '未知',
+            'singer': song_name,
             'style': '流行',
-            'play_count': f"{random.randint(500, 5000)}万",
-            'collect_count': f"{random.randint(10, 200)}万",
-            'chart_weeks': f"{random.randint(1, 10)}周",
-            'peak_rank': random.randint(1, 10),
-            'highlight': '制作精良，值得一听',
+            'play_count': '未知',
+            'collect_count': '未知',
+            'chart_weeks': '未知',
+            'peak_rank': 99,
+            'highlight': '热门新歌，值得一听',
             'feeling': '推荐指数：⭐⭐⭐⭐',
             'scene': '日常通勤',
             'fun_fact': '近期热门歌曲',
@@ -154,6 +154,7 @@ class MusicReviewGenerator:
                 'scene': data['scene'],
                 'fun_fact': data['fun_fact'],
                 'emotion': data['emotion'],
+                'highlight': data['highlight'],
                 'tags': data['tags']
             })
 
@@ -269,7 +270,12 @@ class WeChatPusher:
         try:
             resp = requests.post(self.api_url, json=payload, timeout=30)
             result = resp.json()
-            return result.get('code') == 200
+            if result.get('code') == 200:
+                print("✅ 推送成功")
+                return True
+            else:
+                print(f"❌ 推送失败: {result.get('msg')}")
+                return False
         except Exception as e:
             print(f"推送异常: {e}")
             return False
@@ -298,9 +304,9 @@ def run_weekly_task():
     success = pusher.send_markdown("🎵 华语音乐榜周报", message)
 
     if success:
-        print("✅ 推送成功！")
+        print("✅ 任务完成！")
     else:
-        print("❌ 推送失败")
+        print("❌ 任务失败")
 
     return success
 
