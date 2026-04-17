@@ -23,10 +23,30 @@ jobs:
       
       - name: 安装依赖
         run: |
-          pip install requests beautifulsoup4 schedule
+          pip install requests beautifulsoup4
       
-      - name: 运行脚本
+      - name: 运行榜单抓取脚本
         env:
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
         run: |
           python music_chart.py
+      
+      - name: 运行点评生成脚本
+        run: |
+          python music_review.py
+      
+      - name: 上传生成的文案附件
+        uses: actions/upload-artifact@v4
+        with:
+          name: music-review-output
+          path: |
+            music_review_*.json
+            music_chart_*.json
+      
+      - name: 上传运行日志（可选）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-logs
+          path: |
+            *.log
